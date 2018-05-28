@@ -30,7 +30,7 @@ Build and install it :
 
 The ZED SDK is also a requirement for this sample, [download the ZED SDK](https://www.stereolabs.com/developers/release/latest/) and follows the [instructions](https://docs.stereolabs.com/overview/getting-started/installation/).
 
-It requires ZED SDK 2.4 for the floor plane detection but can be easily [disabled](src/main.cpp#L99).
+It requires ZED SDK 2.4 for the floor plane detection but can be easily [disabled](src/main.cpp#L99) to use an older ZED SDK version.
 
 ### Build the program
 
