@@ -24,10 +24,10 @@ DEFINE_int32(logging_level, 3, "The logging level. Integer in the range [0, 255]
         " 255 will not output any. Current OpenPose library messages are in the range 0-4: 1 for"
         " low priority messages and 4 for important ones.");
 // OpenPose
-DEFINE_string(model_pose, "COCO", "Model to be used. E.g. `COCO` (18 keypoints), `MPI` (15 keypoints, ~10% faster), "
+DEFINE_string(model_pose, "BODY_25", "Model to be used. E.g., `BODY_25` (25 keypoints), `COCO` (18 keypoints), `MPI` (15 keypoints, ~10% faster), "
         "`MPI_4_layers` (15 keypoints, even faster but less accurate).");
 DEFINE_string(model_folder, "models/", "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
-DEFINE_string(net_resolution, /*"320x240"*/"656x368", "Multiples of 16. If it is increased, the accuracy potentially increases. If it is"
+DEFINE_string(net_resolution, "320x240"/*"656x368"*/, "Multiples of 16. If it is increased, the accuracy potentially increases. If it is"
         " decreased, the speed increases. For maximum speed-accuracy balance, it should keep the"
         " closest aspect ratio possible to the images or videos to be processed. Using `-1` in"
         " any of the dimensions, OP will choose the optimal aspect ratio depending on the user's"
@@ -51,7 +51,7 @@ DEFINE_double(render_threshold, 0.12, "Only estimated keypoints whose score conf
 DEFINE_double(alpha_pose, 0.6, "Blending factor (range 0-1) for the body part rendering. 1 will show it completely, 0 will"
         " hide it. Only valid for GPU rendering.");
 DEFINE_string(svo_path, "", "SVO filepath");
-DEFINE_bool(ogl_ptcloud, false, "Display the point cloud in the OpenGL window");
+DEFINE_bool(ogl_ptcloud, true, "Display the point cloud in the OpenGL window");
 DEFINE_bool(estimate_floor_plane, true, "Initialize the camera position from the floor plan detected in the scene");
 DEFINE_bool(opencv_display, true, "Enable the 2D view of openpose output");
 DEFINE_bool(depth_display, false, "Enable the depth display with openCV");
@@ -95,6 +95,7 @@ int image_height = 405;
 
 bool need_new_image = true;
 bool ready_to_start = false;
+int model_kp_number = 25;
 
 #define ENABLE_FLOOR_PLANE_DETECTION 1 // Might be disable to use older ZED SDK
 
@@ -141,7 +142,7 @@ int main(int argc, char **argv) {
     initParameters.coordinate_system = COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP;
     initParameters.sdk_verbose = 0;
     initParameters.depth_stabilization = true;
-    initParameters.svo_real_time_mode = 0;
+    initParameters.svo_real_time_mode = 1;
 
     if (std::string(FLAGS_svo_path).find(".svo")) {
         cout << "Opening " << FLAGS_svo_path << endl;
@@ -172,6 +173,11 @@ int main(int argc, char **argv) {
     cout << netInputSize.x << "x" << netInputSize.y << endl;
     netOutputSize = netInputSize;
     poseModel = op::flagsToPoseModel(FLAGS_model_pose);
+
+    if (FLAGS_model_pose == "COCO") model_kp_number = 18;
+    else if (FLAGS_model_pose.find("MPI") != std::string::npos) model_kp_number = 15;
+    else if (FLAGS_model_pose == "BODY_25") model_kp_number = 25;
+
     // Check no contradictory flags enabled
     if (FLAGS_alpha_pose < 0. || FLAGS_alpha_pose > 1.) op::error("Alpha value for blending must be in the range [0,1].", __LINE__, __FUNCTION__, __FILE__);
     if (FLAGS_scale_gap <= 0. && FLAGS_scale_number > 1) op::error("Incompatible flag configuration: scale_gap must be greater than 0 or scale_number = 1.", __LINE__, __FUNCTION__, __FILE__);
@@ -222,6 +228,7 @@ void findpose() {
 }
 
 // The 3D of the point is not directly taken 'as is'. If the measurement isn't valid, we look around the point in 2D to find a close point with a valid depth
+
 sl::float4 getPatchIdx(const int &center_i, const int &center_j, sl::Mat &xyzrgba) {
     sl::float4 out(NAN, NAN, NAN, NAN);
     bool valid_measure;
@@ -249,31 +256,52 @@ void fill_people_ogl(op::Array<float> &poseKeypoints, sl::Mat &xyz) {
     // Common parameters needed
     const auto numberPeopleDetected = poseKeypoints.getSize(0);
     const auto numberBodyParts = poseKeypoints.getSize(1);
+    std::vector<int> partsLink;
 
-    //https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/keypoints_pose.png
-    std::vector<int> partsLink = {
-        //0, 1,
-        2, 1,
-        1, 5,
-        8, 11,
-        1, 8,
-        11, 1,
-        8, 9,
-        9, 10,
-        11, 12,
-        12, 13,
-        2, 3,
-        3, 4,
-        5, 6,
-        6, 7,
-        //0, 15,
-        //15, 17,
-        //0, 14,
-        //14, 16,
-        16, 1,
-        17, 1,
-        16, 17
-    };
+    switch (model_kp_number) {
+        case 15:
+            //https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/keypoints_pose_18.png
+            partsLink = {
+                0, 1, 1, 2, 2, 3, 3, 4, 1, 5, 5, 6, 6, 7, 1, 14, 14, 8, 8, 9, 9, 10, 14, 11, 11, 12, 12, 13
+            };
+            break;
+        case 18:
+            //https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/keypoints_pose_18.png
+            partsLink = {
+                //0, 1,
+                2, 1,
+                1, 5,
+                8, 11,
+                1, 8,
+                11, 1,
+                8, 9,
+                9, 10,
+                11, 12,
+                12, 13,
+                2, 3,
+                3, 4,
+                5, 6,
+                6, 7,
+                //0, 15,
+                //15, 17,
+                //0, 14,
+                //14, 16,
+                16, 1,
+                17, 1,
+                16, 17
+            };
+            break;
+
+        case 25:
+            //https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/media/keypoints_pose_25.png
+            partsLink = {
+                0, 1, 1, 2, 2, 3, 3, 4, 1, 5, 5, 6, 6, 7, 1, 8, 8, 9, 8, 12, 12,
+                13, 13, 14, 14, 19, 19, 20, 14, 21, 8, 9, 9, 10, 10, 11, 11, 24,
+                11, 22, 22, 23, 0, 16, 0, 15, 15, 17, 16, 18
+            };
+            break;
+
+    }
 
     sl::float4 v1, v2;
     int i, j;
@@ -486,7 +514,7 @@ void run() {
                     cv::imshow("Pose", outputImage);
                 if (FLAGS_depth_display)
                     cv::imshow("Depth", slMat2cvMat(depth_img_buffer));
-                
+
                 cv::waitKey(10);
             }
         }
