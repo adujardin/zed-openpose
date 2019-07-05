@@ -1,6 +1,8 @@
 # OpenPose ZED
 
-![What to expect](./OpenPose_ZED.png)
+<p align="center">
+    <img src="OpenPose_ZED.gif", width="800">
+</p>
 
 This sample show how to simply use the ZED with [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose), the deep learning framework that detects the skeleton from a single 2D image. The 3D information provided by the ZED is used to place the joints in space.
 The output is a 3D view of the skeletons.
@@ -53,7 +55,13 @@ A `models` folder should now be in the build folder
 - Navigate to the build directory and launch the executable
 - Or open a terminal in the build directory and run the sample :
 
-        ./zed_openpose
+        ./zed_openpose -net_resolution 656x368
+
+
+<p align="center">
+    <img src="./OpenPose_ZED.png", width="650">
+</p>
+
 
 ## Options
 
