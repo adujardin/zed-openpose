@@ -39,11 +39,14 @@ ENDIF(WIN32)
 
 find_package(CUDA REQUIRED)
 find_package(OpenGL)
+find_package(OpenCV REQUIRED)
 
 include_directories(${ZED_INCLUDE_DIRS})
 include_directories(${GLEW_INCLUDE_DIRS})
 include_directories(${GLUT_INCLUDE_DIRS})
 include_directories(${CUDA_INCLUDE_DIRS})
+include_directories(${OPENCV_INCLUDE_DIRS})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 link_directories(${ZED_LIBRARY_DIR})
@@ -51,6 +54,7 @@ link_directories(${GLEW_LIBRARY_DIRS})
 link_directories(${GLUT_LIBRARY_DIRS})
 link_directories(${OpenGL_LIBRARY_DIRS})
 link_directories(${CUDA_LIBRARY_DIRS})
+link_directories(${OpenCV_LIBRARY_DIRS})
 
 FILE(GLOB_RECURSE SRC_FILES src/*.cpp)
 FILE(GLOB_RECURSE HDR_FILES include/*.hpp)
@@ -64,4 +68,5 @@ target_link_libraries(${execName}
                         ${GLEW_LIBRARY}
                         ${SPECIAL_OS_LIBS}
                         ${OPENGL_LIBRARIES}
+                        ${OpenCV_LIBRARIES}
                         ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY} ${CUDA_NPP_LIBRARIES_ZED} )

@@ -623,10 +623,10 @@ void GLViewer::init(bool useTexture) {
 }
 
 void GLViewer::initialize() {
-    char *argv[1];
-    argv[0] = '\0';
+    char *myargv[1];
     int argc = 1;
-    glutInit(&argc, argv);
+    myargv [0] = strdup ("ZED OpenPose");
+    glutInit(&argc, myargv);
     glutInitWindowSize(wnd_w, wnd_h);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutCreateWindow("ZED 3D Viewer");
