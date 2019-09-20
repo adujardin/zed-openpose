@@ -46,7 +46,7 @@ target_link_libraries(${execName}
                         ${OpenPose_LIBS} ${GLOG_LIBRARY} ${GFLAGS_LIBRARY} ${Caffe_LIBS}
                         ${ZED_LIBRARIES}
                         ${GLUT_LIBRARY}
-                        ${GLEW_LIBRARY}
+                        ${GLEW_LIBRARIES}
                         ${SPECIAL_OS_LIBS}
                         ${OPENGL_LIBRARIES}
                         ${OpenCV_LIBRARIES}
