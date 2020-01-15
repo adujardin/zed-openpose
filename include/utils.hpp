@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <vector>
 #include <random>
+#include <opencv2/opencv.hpp>
 
 #include <sl/Camera.hpp>
 #include <openpose/headers.hpp>

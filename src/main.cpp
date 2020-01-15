@@ -167,12 +167,12 @@ int main(int argc, char **argv) {
     cout << "OpenPose : loading models..." << endl;
     // ------------------------- INITIALIZATION -------------------------
     // Read Google flags (user defined configuration)
-    outputSize = op::flagsToPoint(FLAGS_output_resolution, "-1x-1");
-    netInputSize = op::flagsToPoint(FLAGS_net_resolution, "-1x368");
+    outputSize = op::flagsToPoint(std::string(FLAGS_output_resolution).c_str(), "-1x-1");
+    netInputSize = op::flagsToPoint(std::string(FLAGS_net_resolution).c_str(), "-1x368");
 
     cout << netInputSize.x << "x" << netInputSize.y << endl;
     netOutputSize = netInputSize;
-    poseModel = op::flagsToPoseModel(FLAGS_model_pose);
+    poseModel = op::flagsToPoseModel(std::string(FLAGS_model_pose).c_str());
 
     if (FLAGS_model_pose == "COCO") model_kp_number = 18;
     else if (FLAGS_model_pose.find("MPI") != std::string::npos) model_kp_number = 15;
@@ -477,10 +477,10 @@ void run() {
                     data_out_mtx.lock();
                     outputArray2 = outputArray;
                     data_out_mtx.unlock();
-                    outputArray = cvMatToOpOutput.createArray(inputImage, scaleInputToOutput, outputResolution);
+                    outputArray = cvMatToOpOutput.createArray(op::Matrix(&inputImage), scaleInputToOutput, outputResolution);
                 }
                 data_in_mtx.lock();
-                netInputArray = cvMatToOpInput.createArray(inputImage, scaleInputToNetInputs, netInputSizes);
+                netInputArray = cvMatToOpInput.createArray(op::Matrix(&inputImage), scaleInputToNetInputs, netInputSizes);
                 need_new_image = false;
                 data_in_mtx.unlock();
 
@@ -507,7 +507,7 @@ void run() {
 
                 // OpenPose output format to cv::Mat
                 if (!outputArray2.empty())
-                    outputImage = opOutputToCvMat.formatToCvMat(outputArray2);
+                    outputImage = *((cv::Mat*)opOutputToCvMat.formatToCvMat(outputArray2).getCvMat());
                 data_out_mtx.unlock();
                 // Show results
                 if (!outputArray2.empty())
