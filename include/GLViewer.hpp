@@ -207,7 +207,7 @@ public:
 
     void draw();
 
-    sl::Texture texture;
+    sl::Mat texture;
 };
 
 

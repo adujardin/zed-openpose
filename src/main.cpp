@@ -79,7 +79,7 @@ bool quit = false;
 GLViewer viewer;
 
 const int MAX_CHAR = 128;
-const sl::UNIT unit = sl::UNIT_METER;
+const sl::UNIT unit = sl::UNIT::METER;
 const float MAX_DISTANCE_LIMB = 1; //0.8;
 const float MAX_DISTANCE_CENTER = 1.8; //1.5;
 
@@ -118,9 +118,9 @@ bool initFloorZED(sl::Camera &zed) {
         init = (zed.findFloorPlane(plane, resetTrackingFloorFrame) == sl::ERROR_CODE::SUCCESS);
         resetTrackingFloorFrame.getInfos();
         if (init) {
-            zed.getPosition(camera_pose, sl::REFERENCE_FRAME_WORLD);
+            zed.getPosition(camera_pose, sl::REFERENCE_FRAME::WORLD);
             cout << "Floor found at : " << plane.getClosestDistance(camera_pose.pose_data.getTranslation()) << " m" << endl;
-            zed.resetTracking(resetTrackingFloorFrame);
+            zed.resetPositionalTracking(resetTrackingFloorFrame);
         }
         sl::sleep_ms(20);
     }
@@ -136,22 +136,22 @@ int main(int argc, char **argv) {
 
     // Set configuration parameters for the ZED
     InitParameters initParameters;
-    initParameters.camera_resolution = RESOLUTION_HD2K;
-    initParameters.depth_mode = DEPTH_MODE_ULTRA; // Might be GPU memory intensive combine with openpose
+    initParameters.camera_resolution = RESOLUTION::HD2K;
+    initParameters.depth_mode = DEPTH_MODE::ULTRA; // Might be GPU memory intensive combine with openpose
     initParameters.coordinate_units = unit;
-    initParameters.coordinate_system = COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP;
+    initParameters.coordinate_system = COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
     initParameters.sdk_verbose = 0;
     initParameters.depth_stabilization = true;
     initParameters.svo_real_time_mode = 1;
 
-    if (std::string(FLAGS_svo_path).find(".svo")) {
+    if (std::string(FLAGS_svo_path).find(".svo") && !std::string(FLAGS_svo_path).empty()) {
         cout << "Opening " << FLAGS_svo_path << endl;
-        initParameters.svo_input_filename.set(std::string(FLAGS_svo_path).c_str());
+        initParameters.input.setFromSVOFile(std::string(FLAGS_svo_path).c_str());
     }
 
     // Open the camera
     ERROR_CODE err = zed.open(initParameters);
-    if (err != sl::SUCCESS) {
+    if (err != sl::ERROR_CODE::SUCCESS) {
         std::cout << err << std::endl;
         zed.close();
         return 1; // Quit if an error occurred
@@ -241,7 +241,7 @@ sl::float4 getPatchIdx(const int &center_i, const int &center_j, sl::Mat &xyzrgb
             for (int x = -R; x <= R; x++) {
                 i = center_i + x;
                 j = center_j + y;
-                xyzrgba.getValue<sl::float4>(i, j, &out, sl::MEM_CPU);
+                xyzrgba.getValue<sl::float4>(i, j, &out, sl::MEM::CPU);
                 valid_measure = isfinite(out.z);
                 if (valid_measure) return out;
             }
@@ -331,11 +331,11 @@ void fill_people_ogl(op::Array<float> &poseKeypoints, sl::Mat &xyz) {
             ]);
 
 #if PATCH_AROUND_KEYPOINT
-            xyz.getValue<sl::float4>(i, j, &keypoints_position[k], sl::MEM_CPU);
+            xyz.getValue<sl::float4>(i, j, &keypoints_position[k], sl::MEM::CPU);
             if (!isfinite(keypoints_position[k].z))
                 keypoints_position[k] = getPatchIdx((const int) i, (const int) j, xyz);
 #else
-            xyz.getValue<sl::float4>(i, j, &keypoints_position[k], sl::MEM_CPU);
+            xyz.getValue<sl::float4>(i, j, &keypoints_position[k], sl::MEM::CPU);
 #endif
             keypoints_position[k].w = score; // the score was overridden by the getValue
 
@@ -402,7 +402,7 @@ void fill_ptcloud(sl::Mat &xyzrgba) {
     pts.resize(total / factor);
     clr.resize(total / factor);
 
-    sl::float4* p_mat = xyzrgba.getPtr<sl::float4>(sl::MEM_CPU);
+    sl::float4* p_mat = xyzrgba.getPtr<sl::float4>(sl::MEM::CPU);
 
     sl::float3* p_f3;
     sl::float4* p_f4;
@@ -427,8 +427,7 @@ void fill_ptcloud(sl::Mat &xyzrgba) {
 void run() {
     sl::RuntimeParameters rt;
     rt.enable_depth = 1;
-    rt.enable_point_cloud = 1;
-    rt.measure3D_reference_frame = sl::REFERENCE_FRAME_WORLD;
+    rt.measure3D_reference_frame = sl::REFERENCE_FRAME::WORLD;
 
     sl::Mat img_buffer, depth_img_buffer, depth_buffer, depth_buffer2;
     op::Array<float> outputArray, outputArray2;
@@ -445,6 +444,7 @@ void run() {
     poseRenderer.initializationOnThread();
 
     // Init
+    sl::Resolution image_resolution(image_width, image_height);
     imageSize = op::Point<int>{image_width, image_height};
     // Get desired scale sizes
     std::vector<op::Point<int>> netInputSizes;
@@ -457,13 +457,13 @@ void run() {
     while (!quit && zed.getSVOPosition() != zed.getSVONumberOfFrames() - 1) {
         INIT_TIMER
         if (need_new_image) {
-            if (zed.grab(rt) == SUCCESS) {
+            if (zed.grab(rt) == ERROR_CODE::SUCCESS) {
 
-                zed.retrieveImage(img_buffer, VIEW::VIEW_LEFT, sl::MEM_CPU, image_width, image_height);
+                zed.retrieveImage(img_buffer, VIEW::LEFT, sl::MEM::CPU, image_resolution);
                 data_out_mtx.lock();
                 depth_buffer2 = depth_buffer;
                 data_out_mtx.unlock();
-                zed.retrieveMeasure(depth_buffer, MEASURE::MEASURE_XYZRGBA, sl::MEM_CPU, image_width, image_height);
+                zed.retrieveMeasure(depth_buffer, MEASURE::XYZRGBA, sl::MEM::CPU, image_resolution);
 
                 cout << zed.getCurrentFPS() << "        \r" << flush;
 
@@ -471,7 +471,7 @@ void run() {
                 cv::cvtColor(inputImageRGBA, inputImage, cv::COLOR_RGBA2RGB);
 
                 if (FLAGS_depth_display)
-                    zed.retrieveImage(depth_img_buffer, VIEW::VIEW_DEPTH, sl::MEM_CPU, image_width, image_height);
+                    zed.retrieveImage(depth_img_buffer, VIEW::DEPTH, sl::MEM::CPU, image_resolution);
 
                 if (FLAGS_opencv_display) {
                     data_out_mtx.lock();
