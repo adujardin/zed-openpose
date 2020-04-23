@@ -653,7 +653,7 @@ void GLViewer::initialize() {
     camera_ = CameraGL(sl::Translation(0, 0, 0), sl::Translation(0, 0, -1));
     camera_.setOffsetFromPosition(sl::Translation(0, 0, 4));
     sl::Rotation cam_rot;
-    sl::float3 euler(180, 0, 0);
+    sl::float3 euler(0, 0, 0);
     cam_rot.setEulerAngles(euler, 0);
     camera_.setRotation(sl::Rotation(cam_rot));
     
